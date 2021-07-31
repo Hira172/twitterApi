@@ -1,13 +1,16 @@
 const OAuth = require('oauth')
+const fs = require('fs')
 const neo4j = require('neo4j-driver')
 const { promisify } = require('util')
 var express = require('express')
+var bodyParser = require('body-parser')
 var cors = require('cors');
-const { async } = require('rxjs');
 const e = require('express');
-const { json } = require('neo4j-driver-core');
 var app = express()
 app.use(cors())
+var jsonParser = bodyParser.json()
+ 
+
 
 var count = 0
 var PTR = 5
@@ -17,10 +20,8 @@ var oauth
 /****************** Api  Connection ******************/
 url = "https://api.twitter.com/1.1/friends/list.json?"
 lookup = "https://api.twitter.com/1.1/users/lookup.json?"
-TWITTER_CONSUMER_KEY = ["4a9X7yYfMBuG9HUc4DRXWdepZ","ySeQ2F2esJoYG4BfsMtuYMYF9","eGcpJRBTqzdeYDcDc9cWAc0bO", "E1ZOU8mR712aq3ecTU2nWKAZA", "sZwFeu4zaxHWI7HoKtUXVfsS8","d2ZosifWrCDm60gabT2Gk9q8g","MncJ7oEAi82h9KhHz2CPyNTGn"]
-TWITTER_CONSUMER_SECRET = ["eZpTxX6aC9SWaMXz19wQ9iiInnuHh5LfjZjbkohEqx05wJMLbd","P9wtvqe15imnS0hcRueWrsZBXZsIOoRbp045reicgrInT4Hvok","NLFSBjyWlSA4Xd5pAuNFIkGOORqa48WSGtfGaBXsx9UkRjKQwr", "7JNFUeoToHTttDhLQb9HmS9iuSauTxtVaV80p7Oyb2whDPRd0M","2qlrSio6r1cj9qmK7AzV3byOpCI1xGi0XpP1RjGmnQzltQU8kl","EnompvfEWeZk2TbVPZ4r9wfY2Lkyvbo5KynD8jh9GGRqrJqIgY","pwzddqRZa0fBRrbeRAYk5EJDBUwtZDa291EcmYrplTJZAYd4l3"]
-TWITTER_ACCESS_KEY = ["1131520630187208705-jEEC0cmZuzIQAq8iJVQtG1v2zBPlBt","1131520630187208705-vAM2Y0Iz0pmEkyWNbAVaSce3BgJfK4", "1131520630187208705-dIjPNsuykeRM2DqFIxiPZQ37q7j5VA","1131520630187208705-F6RRy0yMaV8LbRFEfhm3iSuQOQGRhH", "1131520630187208705-n5HgPW6wgVqFUCOvc08JOp2DGENJWM","1131520630187208705-TienDacYJG9W95K7S2N2ngNna1LuOv","1131520630187208705-iDOob0WLM4iWlbVkis2Fn8rwr859Va"]
-TWITTER_ACCESS_TOKEN_SECRET = ["YuTrS6LTtflKvV4f0vugIRmvEW1d5M7wklAt4iwbzjhu4","LVDIjAu464pmuicOrWtEL2PBJMMXQontrtTITuHdE2Tjk", "PCsYCk5R17mJMiPimmP2uYxfODPhXgls87jKoQ7kJpgU1","sDiE3H3tuH0IcWyNgaW6QhOsedUyGKp0FT43YfS0ESAeQ","YeMMLNMGrKn53TlP7ZNUtDJ3TWZEkvT8hnFQ8ZMS6Vsc3","BN8x98wUXoQnQg0Yaun0fT4Yqr3YAIOxnCgHB5S0boMAR","BXI50WS630rpowIdXJutvUtWNF9NyrFHNToRZrAxN4pHx"]
+const config = require('./config.json')
+const { json } = require('neo4j-driver-core')
 
 
 /****************** neo4j  Connection ******************/
@@ -38,8 +39,8 @@ async function getOauth(){
   oauth = new OAuth.OAuth(
     'https://api.twitter.com/oauth/request_token',
     'https://api.twitter.com/oauth/access_token',
-    TWITTER_CONSUMER_KEY[PTR],
-    TWITTER_CONSUMER_SECRET[PTR],
+    config[PTR].TWITTER_CONSUMER_KEY,
+    config[PTR].TWITTER_CONSUMER_SECRET,
     '1.0A', null, 'HMAC-SHA1'
   )
 }
@@ -53,7 +54,7 @@ async function switchKeys(){
     count = 0
     PTR++
     getOauth()
-    if(PTR>TWITTER_CONSUMER_KEY.length){
+    if(PTR>config[PTR].TWITTER_CONSUMER_KEY.length){
       PTR = 0
     }
   }
@@ -71,8 +72,8 @@ async function getFollowers (username,level) {
     // console.log("Api called in cursor "+username)
     await get(
       url+`screen_name=${username} &count=200 &cursor=`+cursor,
-      TWITTER_ACCESS_KEY[PTR],
-      TWITTER_ACCESS_TOKEN_SECRET[PTR],
+      config[PTR].TWITTER_ACCESS_KEY,
+      config[PTR].TWITTER_ACCESS_TOKEN_SECRET,
     )
     .then(body=>JSON.parse(body))
     .then(async response=>{
@@ -179,9 +180,9 @@ async function calculate(){
       MATCH(n:Level0)-[:Follows]->(m:Level1)
       WITH m, count(m) as AsLevel1
       MERGE (q:Date{date:date(),time:dateTime().hour})
+      set q.dateTime = dateTime(), q.test = "tysfdh"
       MERGE (m)<-[d:Data{accountAge: duration.inDays(date(m.createdAt),date()).days}]-(q)
       SET d.mutualCount=AsLevel1
-
       WITH q
       MATCH(m:Profile)
       MERGE (m)<-[d:Data{accountAge: duration.inDays(date(m.createdAt),date()).days}]-(q)
@@ -247,7 +248,7 @@ setInterval(calculate, 21600000); //Timer for calculations
 
 
 /********* Api to calculate all the values again in neo4j**************/
-app.get('/load2neo4j/calculate',async function(req, res){
+app.post('/load2neo4j/calculate',async function(req, res){
   await calculate()
   .then(()=>{
     res.send("Done calculations")
@@ -257,9 +258,9 @@ app.get('/load2neo4j/calculate',async function(req, res){
   })
 })
 
-/********* Api to import 2 level followers to neo4j**************/
-app.post('/load2neo4j/:level0', async  function (req, res) {
-  screenName = req.params.level0
+/********* Api to export 2 level followers to neo4j**************/
+app.post('/load2neo4j/all', async  function (req, res) {
+  screenName = req.body.level0
   await checkExistance(screenName)
   .then(async ()=>{
     await get2LevelFollowers(screenName)
@@ -278,38 +279,214 @@ app.post('/load2neo4j/:level0', async  function (req, res) {
 
 
 
-/********* Api to get All details of a specific profile**************/
-app.get('/getData/:userName', async  function (req, res) {
-  screenName = req.params.userName
+/********* Api to get All details of a specific profile at a specific time**************/
+app.get('/getData/profileTime', async  function (req, res) {
+  screenName = req.query.screenName
+  time = req.query.time
   query = ` MATCH(n:Profile{screenName:'`+screenName+`'})<-[d:Data]-(q:Date{date:date()})
-            where q.time >= dateTime().hour
+            WHERE  duration.inSeconds(q.dateTime, dateTime()).hours <=`+hours+`
+            and duration.inSeconds(q.dateTime, dateTime()).hours >=`+hours-6+`
             RETURN n, d
             LIMIT 1`
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
   session = driver.session()
-      await session.run(query)
-      .then(response=>{
-        result = {
-          "Profile": response.records[0]._fields[0].properties,
-          "Cal": response.records[0]._fields[1].properties
-        }
-        res.send(result)
-      })
-      .catch(e=>{
-        console.log(e)
-        throw e;
-      })
-      .finally(()=>{
-        session.close()
-      })
+  await session.run(query)
+  .then(response=>{
+    result = {
+      "Properties": response.records[0]._fields[0].properties,
+      "calculated": response.records[0]._fields[1].properties
+    }
+    res.send(result)
+  })
+  .catch(e=>{
+    res.send(e)
+  })
+  .finally(()=>{
+    session.close()
+  })
 })
 
 
 
+/********* Api to get All details of a specific profile**************/
+app.get('/getData/profile', async  function (req, res) {
+  screenName = req.query.screenName
+  query = ` MATCH(n:Profile{screenName:'`+screenName+`'})<-[d:Data]-(q:Date{date:date()})
+            WHERE  duration.inSeconds(q.dateTime, dateTime()).hours <=6
+            RETURN n, d
+            LIMIT 1`
+  const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
+  session = driver.session()
+  await session.run(query)
+  .then(response=>{
+    result = {
+      "Properties": response.records[0]._fields[0].properties,
+      "calculated": response.records[0]._fields[1].properties
+    }
+    res.send(result)
+  })
+  .catch(e=>{
+    res.send(e)
+  })
+  .finally(()=>{
+    session.close()
+  })
+})
+
+/********* Api to add new api key to the config file**************/
+app.post('/create/apikey',jsonParser, function(req, res){
+  var json = {
+    TWITTER_CONSUMER_KEY : req.body.consumerKey,
+    TWITTER_CONSUMER_SECRET : req.body.consumerSecret,
+    TWITTER_ACCESS_KEY : req.body.accessKey,
+    TWITTER_ACCESS_TOKEN_SECRET :  req.body.accessSecret
+  }
+  config.push(json)
+  fs.writeFile('./config.json', JSON.stringify(config), err => {
+    if (err) {
+        res.send('Error writing file: ', err)
+    } else {
+        res.send("Successfully added new key to file")
+    }
+})
+})
+
+
+/********* Api to add new label to the existing node in neo4j**************/
+app.post('/updateProfile/add/label',jsonParser,async function(req, res){
+
+  query = `
+      MATCH(n:Profile{screenName:'`+req.body.screenName+`'})
+      set n:`+req.body.newLabel+`
+      RETURN n
+  `
+  const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
+  session = driver.session()
+  await session.run(query)
+  .then(response=>{
+    console.log(response)
+    if(response.summary.updateStatistics._stats.labelsAdded == 0){
+      if(response.records.length == 0)
+        res.send("No such user found")
+      else
+        res.send("The label already exists for this user")
+    }
+    else{
+      res.send("Profile Updated")
+    }
+    
+  })
+  .catch(e=>{
+    res.send(e)
+  })
+  .finally(()=>{
+    session.close()
+  })
+})
+
+/********* Api to add new tag to the existing node in neo4j**************/
+app.post('/updateProfile/add/tag',jsonParser,async function(req, res){
+  query = `
+      MATCH(n:Profile{screenName:'`+req.body.screenName+`'}) 
+      set n.tags = ( case exists(n.tags) 
+      when true
+        THEN n.tags + "`+req.body.tag+`"
+      else
+        [] + "`+req.body.tag+`"
+      end)
+      RETURN n
+  `
+  const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
+  session = driver.session()
+  await session.run(query)
+  .then(response=>{
+    if(response.summary.updateStatistics._stats.propertiesSet == 0){
+      res.send("No such user found")
+    }
+    else{
+      res.send("Profile Updated")
+    }
+    
+  })
+  .catch(e=>{
+    res.send(e)
+  })
+  .finally(()=>{
+    session.close()
+  })
+})
+
+
+/********* Api to delete tag to the existing node in neo4j**************/
+app.post('/updateProfile/delete/tag',jsonParser,async function(req, res){
+  query = `
+      MATCH(n:Profile{screenName:'`+req.body.screenName+`'}) 
+      SET n.tags = [x IN n.tags WHERE x <> "`+req.body.tag+`"]
+      RETURN n
+  `
+  const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
+  session = driver.session()
+  await session.run(query)
+  .then(response=>{
+    if(response.summary.updateStatistics._stats.propertiesSet == 0){
+      res.send("No such user found")
+    }
+    else{
+      res.send("Profile Updated")
+    }
+    
+  })
+  .catch(e=>{
+    res.send(e)
+  })
+  .finally(()=>{
+    session.close()
+  })
+})
+
+
+
+app.get('/allProfileCount',async function(req,res){
+  query = `
+      MATCH (a) WITH DISTINCT LABELS(a) AS temp, COUNT(a) AS tempCnt
+      UNWIND temp AS label
+      RETURN label, SUM(tempCnt) AS cnt
+      `
+  const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
+  session = driver.session()
+  await session.run(query)
+  .then(response=>{
+    var txt = "{"
+    for(i = 0;i<response.records.length;i++){
+      txt += "\""+response.records[i]._fields[0]+"\": \""+response.records[i]._fields[1]+"\","
+    }
+    txt = txt.slice(0, -1) 
+    txt+="}"
+    console.log(txt)
+    res.send(JSON.parse(txt))
+
+  })
+  .catch(e=>{
+  res.send(e)
+  })
+  .finally(()=>{
+  session.close()
+  })
+})
+
+
+
+/****** default Api ******/
 app.get('',function(req, res){
-  res.send("Welcome to the twitter apis")
+  msg = `
+  Welcome to the twitter apis\n 
+  Visit: 
+  https://docs.google.com/document/d/1wh60XtV7MnTmyewUvAoUN0av-2ie5dX5QsgulNdhzac/edit?usp=sharing 
+  to view all the details about the document
+  `
+  res.send(msg)
 })
 
 
 
-app.listen(3000)
+app.listen(8080)
