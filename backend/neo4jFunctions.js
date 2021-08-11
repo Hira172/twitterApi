@@ -21,7 +21,7 @@ module.exports = {
             where not m:ignoreCal
             MERGE (m)<-[d:Data{accountAge: duration.inDays(date(m.createdAt),date()).days}]-(q)
             SET d.mutualCount =  (case d.mutualCount when null then 1 else d.mutualCount end) ,  d.discoveredAge= (case  duration.inDays(date(m.storedOn),date()).days when 0 then 1 else  duration.inDays(date(m.storedOn),date()).days end)
-            SET d.reputation = d.mutualCount*m.listedCount, d.hidden = toFloat(d.reputation)/toFloat(m.followerCount), d.AA_Viral = toFloat(m.followerCount)/toFloat(d.accountAge), d.AA_Adoption = toFloat(d.mutualCount)/toFloat(d.accountAge), d.AA_Hotness = toFloat(d.reputation) / toFloat(d.accountAge), d.AA_Gem = toFloat(d.hidden) / toFloat(d.accountAge), d.DA_Viral = toFloat(m.followerCount) / toFloat(d.discoveredAge), d.DA_Adoption = toFloat(d.mutualCount) / toFloat(d.discoveredAge), d.DA_Hotness = toFloat(d.reputation) / toFloat(d.discoveredAge), d.TS_Viral = d.AA_Viral + d.DA_Viral,d.TS_Adoption = d.AA_Adoption + d.DA_Adoption, d.TS_Hotness = d.AA_Hotness + d.DA_Hotness, d.TS_Gem = d.AA_Gem + d.DA_Gem, d.TS_Value = d.TS_Hotness + d.TS_Gem, d.TS_Score = d.TS_Viral + d.TS_Adoption + d.TS_Hotness + d.TS_Gem
+            SET d.reputation = d.mutualCount*m.listedCount, d.hidden = toFloat(d.reputation)/toFloat(m.followerCount), d.AA_Viral = toFloat(m.followerCount)/toFloat(d.accountAge), d.AA_Adoption = toFloat(d.mutualCount)/toFloat(d.accountAge), d.AA_Hotness = toFloat(d.reputation) / toFloat(d.accountAge), d.AA_Gem = toFloat(d.hidden) / toFloat(d.accountAge), d.DA_Gem = toFloat(d.hidden) / toFloat(d.discoveredAge),d.DA_Viral = toFloat(m.followerCount) / toFloat(d.discoveredAge), d.DA_Adoption = toFloat(d.mutualCount) / toFloat(d.discoveredAge), d.DA_Hotness = toFloat(d.reputation) / toFloat(d.discoveredAge), d.TS_Viral = d.AA_Viral + d.DA_Viral,d.TS_Adoption = d.AA_Adoption + d.DA_Adoption, d.TS_Hotness = d.AA_Hotness + d.DA_Hotness, d.TS_Gem = d.AA_Gem + d.DA_Gem, d.TS_Value = d.TS_Hotness + d.TS_Gem, d.TS_Score = d.TS_Viral + d.TS_Adoption + d.TS_Hotness + d.TS_Gem
         `
         session = driver.session()
         await session.run(query)
@@ -40,7 +40,8 @@ module.exports = {
         console.log(e)
         throw e
     }
+
     
 
-}
+    } 
 }

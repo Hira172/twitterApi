@@ -19,6 +19,7 @@ import MainAlgo from './MainAlgo';
 import AddApiKey from './AddApiKey'
 import UpdateProfile from './UpdateProfile';
 import UpdateProfileTag from './UpdateProfileTag';
+import DiscoverLevel0 from './DiscoverLevel0';
 
   export default function Menu() {
 
@@ -31,7 +32,8 @@ import UpdateProfileTag from './UpdateProfileTag';
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="me-auto">
               <Nav.Link href="/">Home</Nav.Link>
-              <Nav.Link href="/newLevel0">New level0</Nav.Link>
+              <Nav.Link href="/newLevel0">Add level0</Nav.Link>
+              <Nav.Link href="/discoverLevel0">Discover level0</Nav.Link>
               <Nav.Link href="/addApiKey">Add Api Key</Nav.Link>
               <NavDropdown title="Update Profile" id="basic-nav-dropdown">
                 <NavDropdown.Item href="/update/Profile/Label">add label </NavDropdown.Item>
@@ -56,6 +58,9 @@ import UpdateProfileTag from './UpdateProfileTag';
       <Switch>
           <Route path="/newLevel0">
             <MainAlgo ></MainAlgo>
+          </Route>
+          <Route path="/discoverLevel0">
+            <DiscoverLevel0 ></DiscoverLevel0>
           </Route>
           <Route path="/addApiKey">
             <AddApiKey ></AddApiKey>

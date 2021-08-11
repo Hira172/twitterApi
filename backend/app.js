@@ -51,8 +51,40 @@ app.post('/load2neo4j/calculate',async function(req, res){
   })
 })
 
+/********* Api to discover new level 0 profiles from neo4j data**************/
+app.get('/discover/level0',jsonParser, async  function (req, res) {
+  try{
+    const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw))
+    query =`
+    MATCH(n:Level1)<-[d:Data]-(q:Date)
+    WHERE not n:IgnoreDiscover and  duration.inSeconds(q.dateTime, dateTime()).hours <=6 
+    WITH n,d ORDER BY d.TS_Value DESC LIMIT 100
+    RETURN n.screenName
+    ORDer by n.followingCount DESC
+    `
+    session = driver.session()
+    await session.run(query)
+    .then(response=>{
+      result = []
+      for(i=0;i<response.records.length;i++)
+        result.push(response.records[i]._fields[0])
+       res.send(result)
+    })
+    .catch(e=>{
+      console.log(e)
+        res.send(e)
+    })
+    .finally(()=>{
+        session.close()
+    })
 
+}
+catch(e){
+  console.log(e)
+  res.send(e)
+}
 
+})
 
 /********* Api to export 2 level followers to neo4j**************/
 app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
@@ -98,7 +130,7 @@ app.get('/getData/profile/Time', async  function (req, res) {
   // screenName = req.query.screenName
   hours = req.query.time
   // {screenName:'`+screenName+`'}
-  query = ` MATCH(n:Profile)<-[d:Data]-(q:Date{date:date()})
+  query = ` MATCH(n:Profile)<-[d:Data]-(q:Date)
             WHERE  duration.inSeconds(q.dateTime, dateTime()).hours <=`+String(hours)+`
             and duration.inSeconds(q.dateTime, dateTime()).hours >=`+String(hours-6)+`
             RETURN n, d`
@@ -199,7 +231,7 @@ app.get('/getData/profile/specificScore', async  function (req, res) {
 /********* Api to get All details of a specific profile**************/
 app.get('/getData/profile', async  function (req, res) {
   screenName = req.query.screenName
-  query = ` MATCH(n:Profile{screenName:'`+screenName+`'})<-[d:Data]-(q:Date{date:date()})
+  query = ` MATCH(n:Profile{screenName:'`+screenName+`'})<-[d:Data]-(q:Date)
             WHERE  duration.inSeconds(q.dateTime, dateTime()).hours <=6
             RETURN n, d
             LIMIT 1`
