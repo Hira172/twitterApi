@@ -1,6 +1,8 @@
 const neo4j = require('neo4j-driver')
 const { promisify } = require('util')
+const fs = require('fs')
 const {uri, user, psw} = require('./neo4j_config.json')
+const neo4jFunctions = require('./neo4jFunctions')
 twitterAuth  = require ('./twitterAuth.js')
 const config = require('./config.json')
 
@@ -41,9 +43,21 @@ const config = require('./config.json')
         session = driver.session()
         await session.run(query)
         .then( ()=>{
+            fs.appendFile('./log.txt',"level "+level+": "+response.users.length+" nodes loaded for user: "+username , err => {
+                if (err) {
+                    console.log('Error writing file: ', err)
+                    res.send('Error writing file: ', err)
+                }
+              })
         console.log("level "+level+": "+response.users.length+" nodes loaded for user: "+username)
         })
         .catch(e=>{
+            fs.appendFile('./log.txt',"\n "+ e , err => {
+                if (err) {
+                    console.log('Error writing file: ', err)
+                    res.send('Error writing file: ', err)
+                }
+              })
         throw e;
         })
         .finally(()=>{
@@ -52,6 +66,12 @@ const config = require('./config.json')
         
     })
     .catch(e=>{
+        fs.appendFile('./log.txt',"\n "+ e , err => {
+            if (err) {
+                console.log('Error writing file: ', err)
+                res.send('Error writing file: ', err)
+            }
+          })
         throw e;
     })
     }
@@ -80,9 +100,21 @@ const config = require('./config.json')
         session = driver.session()
         await session.run(query)
         .then(response=>{
+            fs.appendFile('./log.txt',"\n Level 0 added to neo4j", err => {
+                if (err) {
+                    console.log('Error writing file: ', err)
+                    res.send('Error writing file: ', err)
+                }
+              })
         console.log("Level 0 added to Neo4j")
         })
         .catch(e=>{
+            fs.appendFile('./log.txt',"\n "+ e , err => {
+                if (err) {
+                    console.log('Error writing file: ', err)
+                    res.send('Error writing file: ', err)
+                }
+              })
         throw e;
         })
         .finally(()=>{
@@ -92,6 +124,12 @@ const config = require('./config.json')
     
     })
     .catch(e=>{
+        fs.appendFile('./log.txt',"\n "+ e , err => {
+            if (err) {
+                console.log('Error writing file: ', err)
+                res.send('Error writing file: ', err)
+            }
+          })
     throw e;
     })
 }
@@ -109,6 +147,12 @@ module.exports = {
                     throw "The data for the user have already been loaded"
                 })
             .catch(e=>{
+                fs.appendFile('./log.txt',"\n "+ e , err => {
+                    if (err) {
+                        console.log('Error writing file: ', err)
+                        res.send('Error writing file: ', err)
+                    }
+                  })
                 throw e;
             })
             .finally(()=>{
@@ -125,23 +169,47 @@ module.exports = {
             console.log("starting to work at Level 1")
             await getFollowers (username,level=1) 
             .then(async ()=>{
+                fs.appendFile('./log.txt',"\n Starting level 2" , err => {
+                    if (err) {
+                        console.log('Error writing file: ', err)
+                        res.send('Error writing file: ', err)
+                    }
+                  })
             console.log("done with Level1 and started working on level2")
             for(i =0;i<global.level1.length;i++){
                 await getFollowers (level1[i],level=2)
                 .catch(e=>{
+                    fs.appendFile('./log.txt',"\n "+ e , err => {
+                        if (err) {
+                            console.log('Error writing file: ', err)
+                            res.send('Error writing file: ', err)
+                        }
+                      })
                 console.log(e)
                 throw e;
                 })
             } 
             })
             .catch(e=>{
+                fs.appendFile('./log.txt',"\n "+ e , err => {
+                    if (err) {
+                        console.log('Error writing file: ', err)
+                        res.send('Error writing file: ', err)
+                    }
+                  })
             console.log(e)
             throw e;
             })
         })
         .then(async ()=>{
-            await calculate()
+            await neo4jFunctions.calculate()
             .catch(e=>{
+                fs.appendFile('./log.txt',"\n "+ e , err => {
+                    if (err) {
+                        console.log('Error writing file: ', err)
+                        res.send('Error writing file: ', err)
+                    }
+                  })
             console.log(e)
             throw e;
             })
@@ -150,6 +218,12 @@ module.exports = {
             console.log("Done")
         })
         .catch(e=>{
+            fs.appendFile('./log.txt',"\n "+ e , err => {
+                if (err) {
+                    console.log('Error writing file: ', err)
+                    res.send('Error writing file: ', err)
+                }
+              })
             console.log(e)
             throw e;
         })
