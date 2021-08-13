@@ -564,7 +564,7 @@ app.get('/getData/profile/prop',async function(req,res){
 })
 
 /****** default Api ******/
-app.get('',function(req, res){
+app.get('/',function(req, res){
   msg = `
   Welcome to the twitter apis\n 
   Visit: 
