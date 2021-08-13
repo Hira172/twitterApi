@@ -2,7 +2,7 @@ const neo4j = require('neo4j-driver')
 const { promisify } = require('util')
 const fs = require('fs')
 const {uri, user, psw} = require('./neo4j_config.json')
-const neo4jFunctions = require('./neo4jFunctions')
+const neo4jFunctions = require('./neo4jFunctions.js')
 twitterAuth  = require ('./twitterAuth.js')
 const config = require('./config.json')
 

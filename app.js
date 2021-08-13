@@ -24,12 +24,12 @@ const config = require('./config.json')
 
 /****************** neo4j  Connection ******************/
 const {uri, user, psw} = require('./neo4j_config.json')
-const neo4jFunctions = require('./neo4jFunctions')
+const neo4jFunctions = require('./neo4jFunctions.js')
 
 
 /********* Creating the oauthenication part  **************/
 twitterAuth  = require ('./twitterAuth.js')
-const twitterfunctions = require('./twitterfunctions')
+const twitterfunctions = require('./twitterfunctions.js')
 oauth  = twitterAuth.getOauth(global.PTR) // first time 
 
  
