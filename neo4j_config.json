@@ -1,6 +1,6 @@
 
 {
-    "uri" : "bolt://localhost:7687",
+    "uri" : "neo4j+s://c769464a.databases.neo4j.io",
     "user" : "neo4j",
-    "psw" : "123"
+    "psw" : "tGHL7urcs5CYQzRGQgK1LJzlubN37-kYBdNHsijw8yw"
 }
