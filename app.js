@@ -29,7 +29,7 @@ const neo4jFunctions = require('./neo4jFunctions.js')
 
 /********* Creating the oauthenication part  **************/
 twitterAuth  = require ('./twitterAuth.js')
-const twitterfunctions = require('./twitterfunctions.js')
+const twitterfunctions from ('./twitterfunctions.js')
 oauth  = twitterAuth.getOauth(global.PTR) // first time 
 
  
