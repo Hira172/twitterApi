@@ -62,6 +62,7 @@ app.post('/load2neo4j/calculate',async function(req, res){
 /********* Api to discover new level 0 profiles from neo4j data**************/
 app.get('/discover/level0',jsonParser, async  function (req, res) {
   try{
+    skip =  req.query.page*req.query.limit;
     const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw))
     query =`
     MATCH(n:Level1)<-[d:Data]-(q:Date)
@@ -69,6 +70,8 @@ app.get('/discover/level0',jsonParser, async  function (req, res) {
     WITH n,d ORDER BY d.TS_Value DESC LIMIT 100
     RETURN n.screenName
     ORDer by n.followingCount DESC
+    SKIP `+skip+`
+    LIMIT `+req.query.limit+`
     `
     session = driver.session()
     await session.run(query)
@@ -112,20 +115,21 @@ catch(e){
 
 /********* Api to export 2 level followers to neo4j**************/
 app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
+  console.log("API called");
   screenName = req.body.screenName
-  await twitterfunctions.checkExistance(screenName)
-  .then(async ()=>{
-    fs.appendFile('./log.txt',"\n Process Started for "+screenName+ " at " + new Date() , err => {
-      if (err) {
-          console.log('Error writing file: ', err)
-          results = {
-            status: 500,
-            description:err
-          }
-          res.send(result)
+  // await twitterfunctions.checkExistance(screenName)
+  // .then(async ()=>{
+  //   fs.appendFile('./log.txt',"\n Process Started for "+screenName+ " at " + new Date() , err => {
+  //     if (err) {
+  //         console.log('Error writing file: ', err)
+  //         results = {
+  //           status: 500,
+  //           description:err
+  //         }
+  //         res.send(result)
          
-      }
-    })
+  //     }
+  //   })
     
     await twitterfunctions.get2LevelFollowers(screenName)
     .then(()=>{
@@ -136,7 +140,7 @@ app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
       res.send(result)
     })
     .catch(e=>{
-      fs.appendFile('./log.txt',"\n "+ e , err => {
+      fs.appendFile('./log.txt',"\n "+ JSON.stringify(e) , err => {
         if (err) {
             console.log('Error writing file: ', err)
             results = {
@@ -153,19 +157,19 @@ app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
       res.send(result)
     })
   })
-  .catch(e=>{
-    fs.appendFile('./log.txt',"\n "+ e , err => {
-      if (err) {
-          console.log('Error writing file: ', err)
-          results = {
-            status: 500,
-            description:e
-          }
-          res.send(result)
-      }
-    })
-  })
-})
+//   .catch(e=>{
+//     fs.appendFile('./log.txt',"\n "+ e , err => {
+//       if (err) {
+//           console.log('Error writing file: ', err)
+//           results = {
+//             status: 500,
+//             description:e
+//           }
+//           res.send(result)
+//       }
+//     })
+//   })
+// })
 
 
 
@@ -174,11 +178,15 @@ app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
 app.get('/getData/profile/Time', async  function (req, res) {
   // screenName = req.query.screenName
   hours = req.query.time
+  skip =  req.query.page*req.query.limit;
+  
   // {screenName:'`+screenName+`'}
   query = ` MATCH(n:Profile)<-[d:Data]-(q:Date)
             WHERE  duration.inSeconds(q.dateTime, dateTime()).hours <=`+String(hours)+`
             and duration.inSeconds(q.dateTime, dateTime()).hours >=`+String(hours-6)+`
-            RETURN n, d`
+            RETURN n, d
+            SKIP `+skip+`
+            LIMIT `+req.query.limit+``
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
   session = driver.session()
   await session.run(query)
@@ -232,12 +240,16 @@ app.get('/getData/profile/Time', async  function (req, res) {
 app.get('/getData/profile/specificScore', async  function (req, res) {
   score = req.query.score
   hours = req.query.time
+  skip =  req.query.page*req.query.limit;
+  
   query = ` MATCH(n:Profile)<-[d6:Data]-(q:Date)
             where duration.inSeconds(q.dateTime, dateTime()).hours<6 and duration.inSeconds(q.dateTime, dateTime()).hours>=0
             OPTIONAL MATCH(n)<-[d12:Data]-(q2:Date)
             WHERE  duration.inSeconds(q.dateTime, dateTime()).hours <=`+String(hours)+`
             and duration.inSeconds(q.dateTime, dateTime()).hours >=`+String(hours-6)+`
-            RETURN n,d6.`+score+`,((-d6.`+score+`+d12.`+score+`)/d6.`+score+`)*100 as change `
+            RETURN n,d6.`+score+`,((-d6.`+score+`+d12.`+score+`)/d6.`+score+`)*100 as change 
+            SKIP `+skip+`
+            LIMIT `+req.query.limit+``
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
   session = driver.session()
   await session.run(query)
@@ -293,11 +305,14 @@ app.get('/getData/profile/specificScore', async  function (req, res) {
 
 /********* Api to get All details of a specific profile**************/
 app.get('/getData/profile', async  function (req, res) {
+  skip =  req.query.page*req.query.limit;
   screenName = req.query.screenName
   query = ` MATCH(n:Profile{screenName:'`+screenName+`'})<-[d:Data]-(q:Date)
             WHERE  duration.inSeconds(q.dateTime, dateTime()).hours <=6
             RETURN n, d
-            LIMIT 1`
+           
+            SKIP `+skip+`
+            LIMIT `+req.query.limit+``
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
   session = driver.session()
   await session.run(query)
@@ -528,11 +543,14 @@ app.post('/updateProfile/delete/tag',jsonParser,async function(req, res){
 
 /***** Find the  labels count*/
 app.get('/allProfileCount',async function(req,res){
+  skip =  req.query.page*req.query.limit;
   query = `
       MATCH (a) 
       WHere not a:Date WITH DISTINCT LABELS(a) AS temp, COUNT(a) AS tempCnt
       UNWIND temp AS label
       RETURN label, SUM(tempCnt) AS count
+      SKIP `+skip+`
+      LIMIT `+req.query.limit+`
       `
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
   session = driver.session()
@@ -562,10 +580,14 @@ app.get('/allProfileCount',async function(req,res){
 
 /**** Get profile according to the tag given***/
 app.get('/getData/profile/Tag',async function(req,res){
+  skip =  req.query.page*req.query.limit;
+  
   query = `
       MATCH(n:Profile{screenName:'test'})
       WHERE "`+req.query.tag+`" IN n.tags
       RETURN n
+      SKIP `+skip+`
+      LIMIT `+req.query.limit+`
       `
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
   session = driver.session()
@@ -613,9 +635,12 @@ app.get('/getData/profile/Tag',async function(req,res){
 
 /****** api to get All profiles for a specific label******/
 app.get('/getData/profile/label',async function(req,res){
+  skip =  req.query.page*req.query.limit;
   queryrun = `
       MATCH(n:Profile:`+req.query.label+`)
       RETURN n
+      SKIP `+skip+`
+      LIMIT `+req.query.limit+`
       `
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
   session = driver.session()
@@ -664,9 +689,13 @@ app.get('/getData/profile/label',async function(req,res){
 
 /****** api to get All profiles for a specific property******/
 app.get('/getData/profile/prop',async function(req,res){
+  skip =  req.query.page*req.query.limit;
   query = `
       MATCH(n:Profile{`+req.query.prop+`:true})
       RETURN n
+      
+      SKIP `+skip+`
+      LIMIT `+req.query.limit+`
       `
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
   session = driver.session()
