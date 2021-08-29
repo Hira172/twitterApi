@@ -35,15 +35,15 @@ const config = require('./config.json')
         global.level1.push(json[i].screen_name)
         var createdate = new Date(json[i].created_at)
         query += "MERGE(m"+i+":Profile{id:"+json[i].id+",name:'"+json[i].name.replace(/'/g, " ")+"',screenName:'"+json[i].screen_name.replace("'", " ")+"', url:'"+json[i].url+"'}) "
-        query+= "\nON CREATE SET m"+i+".storedOn = date()"
-        query+= "\nset m"+i+" :Level"+level+", m"+i+".createdAt=date('"+createdate.getFullYear()+"-"+(createdate.getMonth()+1)+"-"+createdate.getDate()+"'),  m"+i+".listedCount="+json[i].listed_count+",  m"+i+".followerCount="+json[i].followers_count+", m"+i+".followingCount="+json[i].friends_count+", m"+i+".favouritesCount="+json[i].favourites_count+", m"+i+".statusCount="+json[i].statuses_count
+        query+= "\nON CREATE SET m"+i+".storedOn = date(),  m"+i+" :Level"+level+", m"+i+".createdAt=date('"+createdate.getFullYear()+"-"+(createdate.getMonth()+1)+"-"+createdate.getDate()+"')"
+        query+= "\nset m"+i+".profile_img = '"+json[0].profile_image_url+"', m"+i+".listedCount="+json[i].listed_count+",  m"+i+".followerCount="+json[i].followers_count+", m"+i+".followingCount="+json[i].friends_count+", m"+i+".favouritesCount="+json[i].favourites_count+", m"+i+".statusCount="+json[i].statuses_count
         query += "\n MERGE(n)-[:Follows]->(m"+i+") \n"
         }
         query += "RETURN 1"
         session = driver.session()
         await session.run(query)
         .then( ()=>{
-            fs.appendFile('./log.txt',"level "+level+": "+response.users.length+" nodes loaded for user: "+username , err => {
+            fs.appendFile('./log.txt',"\nlevel "+level+": "+response.users.length+" nodes loaded for user: "+username , err => {
                 if (err) {
                     console.log('Error writing file: ', err)
                     res.send('Error writing file: ', err)
@@ -66,6 +66,7 @@ const config = require('./config.json')
         
     })
     .catch(e=>{
+        console.log(e)
         fs.appendFile('./log.txt',"\n "+ e , err => {
             if (err) {
                 console.log('Error writing file: ', err)
@@ -92,11 +93,12 @@ const config = require('./config.json')
     .then(async json=>{
         count++;
         // send data to neo4j
+        // console.log(json[0])
         const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw))
         var createdate = new Date(json[0].created_at)
         var query = "MERGE(n:Profile{id:"+json[0].id+",name:'"+json[0].name+"',screenName:'"+json[0].screen_name+"', url:'"+json[0].url+"'})"
-        query+= "\nON CREATE SET n.storedOn = date()"
-        query+= "\nset n :Level0, n.createdAt=date('"+createdate.getFullYear()+"-"+(createdate.getMonth()+1)+"-"+createdate.getDate()+"'), n.listedCount="+json[0].listed_count+", n.followerCount="+json[0].followers_count+",n.followingCount="+json[0].friends_count+",n.favouritesCount="+json[0].favourites_count+",n.statusCount="+json[0].statuses_count
+        query+= "\nON CREATE SET n.storedOn = date(),   n.createdAt=date('"+createdate.getFullYear()+"-"+(createdate.getMonth()+1)+"-"+createdate.getDate()+"')"
+        query+= "\nset n :Level0, n.profile_img = '"+json[0].profile_image_url+"', n.listedCount="+json[0].listed_count+", n.followerCount="+json[0].followers_count+",n.followingCount="+json[0].friends_count+",n.favouritesCount="+json[0].favourites_count+",n.statusCount="+json[0].statuses_count
         session = driver.session()
         await session.run(query)
         .then(response=>{

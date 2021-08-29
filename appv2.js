@@ -55,7 +55,7 @@ app.post('/load2neo4j/calculate',async function(req, res){
       status: 500,
       description:e
     }
-    res.send(result)
+    res.send(results)
   })
 })
 
@@ -95,7 +95,7 @@ app.get('/discover/level0',jsonParser, async  function (req, res) {
         status: 500,
         description:e
       }
-      res.send(result)
+      res.send(results)
     })
     .finally(()=>{
         session.close()
@@ -108,7 +108,7 @@ catch(e){
     status: 500,
     description:e
   }
-  res.send(result)
+  res.send(results)
 }
 
 })
@@ -119,17 +119,17 @@ app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
   screenName = req.body.screenName
   // await twitterfunctions.checkExistance(screenName)
   // .then(async ()=>{
-  //   fs.appendFile('./log.txt',"\n Process Started for "+screenName+ " at " + new Date() , err => {
-  //     if (err) {
-  //         console.log('Error writing file: ', err)
-  //         results = {
-  //           status: 500,
-  //           description:err
-  //         }
-  //         res.send(result)
+    fs.appendFile('./log.txt',"\n Process Started for "+screenName+ " at " + new Date() , err => {
+      if (err) {
+          console.log('Error writing file: ', err)
+          results = {
+            status: 500,
+            description:err
+          }
+          res.send(results)
          
-  //     }
-  //   })
+      }
+    })
     
     await twitterfunctions.get2LevelFollowers(screenName)
     .then(()=>{
@@ -137,7 +137,7 @@ app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
         status: 200,
         description:"Done successfully"
       }
-      res.send(result)
+      res.send(results)
     })
     .catch(e=>{
       fs.appendFile('./log.txt',"\n "+ JSON.stringify(e) , err => {
@@ -147,14 +147,14 @@ app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
               status: 500,
               description:err
             }
-            res.send(result)
+            res.send(results)
           }
       })
       results = {
         status: 500,
         description:e
       }
-      res.send(result)
+      res.send(results)
     })
   })
 //   .catch(e=>{
@@ -165,7 +165,7 @@ app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
 //             status: 500,
 //             description:e
 //           }
-//           res.send(result)
+//           res.send(results)
 //       }
 //     })
 //   })
@@ -196,7 +196,7 @@ app.get('/getData/profile/Time', async  function (req, res) {
         status: 204,
         description:"No such user found"
       }
-      res.send(result)
+      res.send(results)
     }
     else{
       var results = []
@@ -216,7 +216,7 @@ app.get('/getData/profile/Time', async  function (req, res) {
         labels= response.records[i]._fields[0].labels
         Properties["labels"] = labels.toString()
         result = Object.assign(Properties, calculated)
-        results.push(result)
+        results.push(results)
         
       }
       res.send({status:200,data:results})
@@ -228,7 +228,7 @@ app.get('/getData/profile/Time', async  function (req, res) {
       status: 500,
       description:e
     }
-    res.send(result)
+    res.send(results)
     console.log(e)
   })
   .finally(()=>{
@@ -259,7 +259,7 @@ app.get('/getData/profile/specificScore', async  function (req, res) {
         status: 204,
         description:"No such user found"
       }
-      res.send(result)
+      res.send(results)
     }
     else{
       var results = []
@@ -293,7 +293,7 @@ app.get('/getData/profile/specificScore', async  function (req, res) {
       status: 500,
       description:e
     }
-    res.send(result)
+    res.send(results)
     console.log(e)
   })
   .finally(()=>{
@@ -322,7 +322,7 @@ app.get('/getData/profile', async  function (req, res) {
         status: 204,
         description:"no such user found"
       }
-      res.send(result)
+      res.send(results)
     }
     else{
         Properties= response.records[0]._fields[0].properties
@@ -338,7 +338,7 @@ app.get('/getData/profile', async  function (req, res) {
         calculated= response.records[0]._fields[1].properties
         result = Object.assign(Properties, calculated)
         final = []
-        for (key in result) {
+        for (key in results) {
           final.push({"label":key,"value":result[key]})
         }  
       res.send({status:200,data:final})
@@ -350,7 +350,7 @@ app.get('/getData/profile', async  function (req, res) {
     status: 500,
     description:e
   }
-  res.send(result)
+  res.send(results)
     console.log(e)
   })
   .finally(()=>{
@@ -373,14 +373,14 @@ app.post('/create/apikey',jsonParser, function(req, res){
         status: 500,
         description:err
       }
-      res.send(result)
+      res.send(results)
        
     } else {
       results = {
         status: 200,
         description:"Successfully added new key to file"
       }
-      res.send(result)
+      res.send(results)
       
     }
 })
@@ -431,14 +431,14 @@ app.post('/updateProfile/add/label',jsonParser,async function(req, res){
         status: 204,
         description:"No such user found"
       }
-      res.send(result)
+      res.send(results)
     }
       else{
         results = {
           status: 200,
           description:"Profile Updated"
         }
-        res.send(result)
+        res.send(results)
     }
   })
   .catch(e=>{
@@ -446,7 +446,7 @@ app.post('/updateProfile/add/label',jsonParser,async function(req, res){
       status: 500,
       description:e
     }
-    res.send(result)
+    res.send(results)
     console.log(e)
   })
   .finally(()=>{
@@ -475,14 +475,14 @@ app.post('/updateProfile/add/tag',jsonParser,async function(req, res){
         status: 204,
         description:"No such user found"
       }
-      res.send(result)
+      res.send(results)
     }
     else{
       results = {
         status: 200,
         description:"Profile Updated"
       }
-      res.send(result)
+      res.send(results)
     }
     
   })
@@ -491,7 +491,7 @@ app.post('/updateProfile/add/tag',jsonParser,async function(req, res){
       status: 500,
       description:e
     }
-    res.send(result)
+    res.send(results)
     console.log(e)
   })
   .finally(()=>{
@@ -516,14 +516,14 @@ app.post('/updateProfile/delete/tag',jsonParser,async function(req, res){
         status: 204,
         description:"No such user found"
       }
-      res.send(result)
+      res.send(results)
     }
     else{
       results = {
         status: 200,
         description:"Profile Updated"
       }
-      res.send(result)
+      res.send(results)
     }
     
   })
@@ -532,7 +532,7 @@ app.post('/updateProfile/delete/tag',jsonParser,async function(req, res){
     status: 500,
     description:e
   }
-  res.send(result)
+  res.send(results)
     console.log(e)
   })
   .finally(()=>{
@@ -571,7 +571,7 @@ app.get('/allProfileCount',async function(req,res){
       status: 500,
       description:e
     }
-    res.send(result)
+    res.send(results)
   })
   .finally(()=>{
   session.close()
@@ -598,7 +598,7 @@ app.get('/getData/profile/Tag',async function(req,res){
         status: 204,
         description:"No such user found"
       }
-      res.send(result)
+      res.send(results)
     }
     else{
       var results = []
@@ -625,7 +625,7 @@ app.get('/getData/profile/Tag',async function(req,res){
     status: 500,
     description:e
   }
-  res.send(result)
+  res.send(results)
   })
   .finally(()=>{
   session.close()
@@ -651,7 +651,7 @@ app.get('/getData/profile/label',async function(req,res){
         status: 204,
         description:"No such user found"
       }
-      res.send(result)
+      res.send(results)
       
     }
     else{
@@ -680,7 +680,7 @@ app.get('/getData/profile/label',async function(req,res){
       status: 500,
       description:e
     }
-    res.send(result)
+    res.send(results)
   })
   .finally(()=>{
   session.close()

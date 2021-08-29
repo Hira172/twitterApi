@@ -1,6 +1,6 @@
 
 {
-    "uri" : "neo4j+s://c769464a.databases.neo4j.io",
+    "uri" : "neo4j://83.229.86.95:7687",
     "user" : "neo4j",
-    "psw" : "tGHL7urcs5CYQzRGQgK1LJzlubN37-kYBdNHsijw8yw"
+    "psw" : "twitter1234567"
 }
