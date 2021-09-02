@@ -12,8 +12,8 @@ var jsonParser = bodyParser.json()
 
 
 global.count = 0
-global.PTR = 7
-global.level1 = []
+global.PTR = 0
+// global.level1 = []
 var oauth
 
 
@@ -37,8 +37,9 @@ oauth  = twitterAuth.getOauth(global.PTR) // first time
  
 
 
+/****Timer for calculations ********/
+ setInterval(neo4jFunctions.calculate, 21600000); 
 
- setInterval(neo4jFunctions.calculate, 21600000); //Timer for calculations
 
 
 /********* Api to calculate all the values again in neo4j**************/
@@ -118,6 +119,7 @@ catch(e){
 /********* Api to export 2 level followers to neo4j**************/
 app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
   console.log("API called");
+  res.send("process started");
   screenName = req.body.screenName
   await twitterfunctions.checkExistance(screenName)
   .then(async ()=>{
@@ -128,7 +130,7 @@ app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
             status: 500,
             description:err
           }
-          res.send(results)
+          // res.send(results)
          
       }
     })
@@ -139,7 +141,7 @@ app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
         status: 200,
         description:"Done successfully"
       }
-      res.send(results)
+      // res.send(results)
     })
     .catch(e=>{
       fs.appendFile('./log.txt',"\n "+ JSON.stringify(e) , err => {
@@ -149,14 +151,14 @@ app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
               status: 500,
               description:err
             }
-            res.send(results)
+            // res.send(results)
           }
       })
       results = {
         status: 500,
         description:e
       }
-      res.send(results)
+      // res.send(results)
     })
   })
   .catch(e=>{
@@ -167,7 +169,7 @@ app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
             status: 500,
             description:e
           }
-          res.send(results)
+          // res.send(results)
       }
     })
   })
@@ -548,15 +550,11 @@ app.post('/updateProfile/delete/tag',jsonParser,async function(req, res){
 
 /***** Find the  labels count*/
 app.get('/allProfileCount',async function(req,res){
-  skip =  req.query.page*req.query.limit;
   query = `
       MATCH (a) 
       WHere not a:Date WITH DISTINCT LABELS(a) AS temp, COUNT(a) AS tempCnt
       UNWIND temp AS label
       RETURN label, SUM(tempCnt) AS count
-      ORDER BY `+req.query.score+` `+req.query.order+` 
-      SKIP `+skip+`
-      LIMIT `+req.query.limit+`
       `
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
   session = driver.session()

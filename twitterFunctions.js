@@ -4,17 +4,31 @@ const fs = require('fs')
 const {uri, user, psw} = require('./neo4j_config.json')
 const neo4jFunctions = require('./neo4jFunctions.js')
 twitterAuth  = require ('./twitterAuth.js')
-const config = require('./config.json')
+const config = require('./config2.json')
 
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+function writeInFile( data){
+    fs.appendFile('./log.txt',"\n"+data, err => {
+        if (err) {
+            console.log('Error writing file: ', err)
+            res.send('Error writing file: ', err)
+        }
+    })
+}
 
 
 /********* Fucntion takes username and gets the followers for that user**************/
  async function getFollowers (username,level) {
     var cursor  = -1
-    twitterAuth.switchKeys()
+    // twitterAuth.switchKeys()
     const get = promisify(oauth.get.bind(oauth))
     while(cursor != 0){
-    console.log("Api called in cursor "+username)
+        diff = 0
+        tempTime = new Date()
+    console.log("Api called in cursor "+username + " at "+ new Date)
     await get(
         url+`screen_name=${username} &count=200 &cursor=`+cursor,
         config[global.PTR].TWITTER_ACCESS_KEY,
@@ -22,7 +36,8 @@ const config = require('./config.json')
     )
     .then(body=>JSON.parse(body))
     .then(async response=>{
-        // console.log("Got data from Api sucessfully")
+
+        console.log("Got data from Api sucessfully " +" at "+ new Date)
         cursor = response.next_cursor
         count++;
         json = response.users
@@ -32,57 +47,65 @@ const config = require('./config.json')
         session = driver.session()
         var query = "MATCH(n:Profile{screenName:'"+username+"'})\n "
         for(i =0;i<json.length;i++){
-        global.level1.push(json[i].screen_name)
-        var createdate = new Date(json[i].created_at)
-        query += "MERGE(m"+i+":Profile{id:"+json[i].id+",name:'"+json[i].name.replace(/'/g, " ")+"',screenName:'"+json[i].screen_name.replace("'", " ")+"', url:'"+json[i].url+"'}) "
-        query+= "\nON CREATE SET m"+i+".storedOn = date(),  m"+i+" :Level"+level+", m"+i+".createdAt=date('"+createdate.getFullYear()+"-"+(createdate.getMonth()+1)+"-"+createdate.getDate()+"')"
-        query+= "\nset m"+i+".profile_img = '"+json[0].profile_image_url+"', m"+i+".listedCount="+json[i].listed_count+",  m"+i+".followerCount="+json[i].followers_count+", m"+i+".followingCount="+json[i].friends_count+", m"+i+".favouritesCount="+json[i].favourites_count+", m"+i+".statusCount="+json[i].statuses_count
-        query += "\n MERGE(n)-[:Follows]->(m"+i+") \n"
+            // global.level1.push(json[i].screen_name)
+            var createdate = new Date(json[i].created_at)
+            query += "MERGE(m"+i+":Profile{screenName:'"+json[i].screen_name.replace("'", " ")+"'}) "
+            query+= "\nON CREATE SET m"+i+".storedOn = date(),   m"+i+".createdAt=date('"+createdate.getFullYear()+"-"+(createdate.getMonth()+1)+"-"+createdate.getDate()+"')"
+            query+= "\nset m"+i+" :Level"+level+", m"+i+".id="+json[i].id+", m"+i+".url='"+json[i].url+"', m"+i+".name='"+json[i].name.replace(/'/g, " ")+"', m"+i+".profile_img = '"+json[0].profile_image_url+"', m"+i+".listedCount="+json[i].listed_count+",  m"+i+".followerCount="+json[i].followers_count+", m"+i+".followingCount="+json[i].friends_count+", m"+i+".favouritesCount="+json[i].favourites_count+", m"+i+".statusCount="+json[i].statuses_count
+            query += "\n MERGE(n)-[:Follows]->(m"+i+") \n"
         }
         query += "RETURN 1"
+        console.log("Sending data to the db")
         session = driver.session()
-        await session.run(query)
-        .then( ()=>{
-            fs.appendFile('./log.txt',"\nlevel "+level+": "+response.users.length+" nodes loaded for user: "+username , err => {
-                if (err) {
-                    console.log('Error writing file: ', err)
-                    res.send('Error writing file: ', err)
+        flag = 0
+        while(flag == 0){
+            await session.run(query)
+            .then( async ()=>{
+                tempTime2 = new Date()
+                diff = tempTime2 - tempTime 
+                writeInFile("level "+level+": "+response.users.length+" nodes loaded for user: "+username)
+                console.log("level "+level+": "+response.users.length+" nodes loaded for user: "+username)
+                flag = 1
+                
+                if (level == 1){
+                    for(i =0;i<response.users.length;i++){
+                        writeInFile("New call for level2")
+                        await getFollowers (response.users[i].screen_name,2)
+                        .catch(e=>{
+                            writeInFile(JSON.stringify(e));
+                            console.log(e);
+                        })
+                    } 
                 }
-              })
-        console.log("level "+level+": "+response.users.length+" nodes loaded for user: "+username)
-        })
-        .catch(e=>{
-            fs.appendFile('./log.txt',"\n "+ e , err => {
-                if (err) {
-                    console.log('Error writing file: ', err)
-                    res.send('Error writing file: ', err)
-                }
-              })
-        throw e;
-        })
-        .finally(()=>{
-        session.close()
-        })
+            })
+            .catch(e=>{
+                writeInFile(JSON.stringify(e));
+            })
+            .finally(()=>{
+            session.close()
+            })
+        }
+        diff = 61000-diff
+        if(diff>0){
+            await sleep(diff)
+        }
+        // time3 =  new Date
+        // console.log("time:", JSON.stringify(tempTime - time3), "   becuse :" ,JSON.stringify(diff))
         
     })
     .catch(e=>{
         console.log(e)
-        fs.appendFile('./log.txt',"\n "+ e , err => {
-            if (err) {
-                console.log('Error writing file: ', err)
-                res.send('Error writing file: ', err)
-            }
-          })
-        throw e;
+        writeInFile(JSON.stringify(e));
     })
-    }
+    // console.log("before end of cursor")
+    }//end of cursor loop
 
 }
 
 /********* Fucntion takes username and gets all the information for that user**************/
  async function  getInfo (username) {
 
-    twitterAuth.switchKeys()
+    // twitterAuth.switchKeys()
     const get = promisify(oauth.get.bind(oauth))
     await get(
     lookup+`screen_name=${username} `,
@@ -92,32 +115,19 @@ const config = require('./config.json')
     .then(body=>JSON.parse(body))
     .then(async json=>{
         count++;
-        // send data to neo4j
-        // console.log(json[0])
         const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw))
         var createdate = new Date(json[0].created_at)
-        var query = "MERGE(n:Profile{id:"+json[0].id+",name:'"+json[0].name+"',screenName:'"+json[0].screen_name+"', url:'"+json[0].url+"'})"
+        var query = "MERGE(n:Profile{screenName:'"+json[0].screen_name+"'})"
         query+= "\nON CREATE SET n.storedOn = date(),   n.createdAt=date('"+createdate.getFullYear()+"-"+(createdate.getMonth()+1)+"-"+createdate.getDate()+"')"
-        query+= "\nset n :Level0, n.profile_img = '"+json[0].profile_image_url+"', n.listedCount="+json[0].listed_count+", n.followerCount="+json[0].followers_count+",n.followingCount="+json[0].friends_count+",n.favouritesCount="+json[0].favourites_count+",n.statusCount="+json[0].statuses_count
+        query+= "\nset n :Level0, n.id="+json[0].id+",n.name='"+json[0].name+"', n.url='"+json[0].url+"', n.profile_img = '"+json[0].profile_image_url+"', n.listedCount="+json[0].listed_count+", n.followerCount="+json[0].followers_count+",n.followingCount="+json[0].friends_count+",n.favouritesCount="+json[0].favourites_count+",n.statusCount="+json[0].statuses_count
         session = driver.session()
         await session.run(query)
         .then(response=>{
-            fs.appendFile('./log.txt',"\n Level 0 added to neo4j", err => {
-                if (err) {
-                    console.log('Error writing file: ', err)
-                    res.send('Error writing file: ', err)
-                }
-              })
-        console.log("Level 0 added to Neo4j")
+            writeInFile("Level 0 added to Neo4j at "+ JSON.stringify(new Date));
+            console.log("Level 0 added to Neo4j")
         })
         .catch(e=>{
-            fs.appendFile('./log.txt',"\n "+ e , err => {
-                if (err) {
-                    console.log('Error writing file: ', err)
-                    res.send('Error writing file: ', err)
-                }
-              })
-        throw e;
+            writeInFile(JSON.stringify(e));
         })
         .finally(()=>{
         session.close()
@@ -126,13 +136,8 @@ const config = require('./config.json')
     
     })
     .catch(e=>{
-        fs.appendFile('./log.txt',"\n "+ e , err => {
-            if (err) {
-                console.log('Error writing file: ', err)
-                res.send('Error writing file: ', err)
-            }
-          })
-    throw e;
+        writeInFile(JSON.stringify(e));
+        console.log(e)
     })
 }
 
@@ -149,13 +154,7 @@ module.exports = {
                     throw "The data for the user have already been loaded"
                 })
             .catch(e=>{
-                fs.appendFile('./log.txt',"\n "+ e , err => {
-                    if (err) {
-                        console.log('Error writing file: ', err)
-                        res.send('Error writing file: ', err)
-                    }
-                  })
-                throw e;
+                writeInFile(JSON.stringify(e));
             })
             .finally(()=>{
                 session.close()
@@ -170,64 +169,24 @@ module.exports = {
         .then(async ()=>{
             console.log("starting to work at Level 1")
             await getFollowers (username,level=1) 
-            .then(async ()=>{
-                fs.appendFile('./log.txt',"\n Starting level 2" , err => {
-                    if (err) {
-                        console.log('Error writing file: ', err)
-                        res.send('Error writing file: ', err)
-                    }
-                  })
-            console.log("done with Level1 and started working on level2")
-            for(i =0;i<global.level1.length;i++){
-                await getFollowers (level1[i],level=2)
-                .catch(e=>{
-                    fs.appendFile('./log.txt',"\n "+ e , err => {
-                        if (err) {
-                            console.log('Error writing file: ', err)
-                            res.send('Error writing file: ', err)
-                        }
-                      })
-                console.log(e)
-                throw e;
-                })
-            } 
-            })
             .catch(e=>{
-                fs.appendFile('./log.txt',"\n "+ e , err => {
-                    if (err) {
-                        console.log('Error writing file: ', err)
-                        res.send('Error writing file: ', err)
-                    }
-                  })
-            console.log(e)
-            throw e;
+                writeInFile(JSON.stringify(e));
+                console.log(e)
             })
         })
         .then(async ()=>{
             await neo4jFunctions.calculate()
             .catch(e=>{
-                fs.appendFile('./log.txt',"\n "+ e , err => {
-                    if (err) {
-                        console.log('Error writing file: ', err)
-                        res.send('Error writing file: ', err)
-                    }
-                  })
+                writeInFile(JSON.stringify(e));
             console.log(e)
-            throw e;
             })
         })
         .then(()=>{
             console.log("Done")
         })
         .catch(e=>{
-            fs.appendFile('./log.txt',"\n "+ e , err => {
-                if (err) {
-                    console.log('Error writing file: ', err)
-                    res.send('Error writing file: ', err)
-                }
-              })
-            console.log(e)
-            throw e;
+            writeInFile(JSON.stringify(e));
+            console.log(e);
         })
         
     }

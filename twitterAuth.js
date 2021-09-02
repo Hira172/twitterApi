@@ -1,5 +1,5 @@
 const OAuth = require('oauth')
-const config = require('./config.json')
+const config = require('./config2.json')
 
 /********* fucntion that is Creating the oauthenication part  **************/
 module.exports = {
@@ -20,7 +20,7 @@ module.exports = {
       global.count = 0
       PTR++
       oauth  = twitterAuth.getOauth()
-      if(PTR>config.length){
+      if(PTR>config.length-1){
         PTR = 0
       }
     }
