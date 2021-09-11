@@ -118,9 +118,9 @@ catch(e){
 
 /********* Api to export 2 level followers to neo4j**************/
 app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
-  console.log("API called");
-  res.send("process started");
+
   screenName = req.body.screenName
+  res.send("process started for "+screenName);
   await twitterfunctions.checkExistance(screenName)
   .then(async ()=>{
     fs.appendFile('./log.txt',"\n Process Started for "+screenName+ " at " + new Date() , err => {
@@ -587,7 +587,7 @@ app.get('/getData/profile/Tag',async function(req,res){
   skip =  req.query.page*req.query.limit;
   
   query = `
-      MATCH(n:Profile{screenName:'test'})
+      MATCH(n:Profile)
       WHERE "`+req.query.tag+`" IN n.tags
       RETURN n
       ORDER BY `+req.query.score+` `+req.query.order+` 
@@ -742,6 +742,12 @@ app.get('/getData/profile/prop',async function(req,res){
   .finally(()=>{
   session.close()
   })
+})
+
+/****get log file */
+app.get('/Download/log',function(req, res){
+  res.status(200)
+        .sendFile(`log.txt`, { root: __dirname })
 })
 
 /****** default Api ******/
