@@ -22,7 +22,7 @@ function writeInFile( data){
 
 /********* Fucntion takes username and gets the followers for that user**************/
  async function getFollowers (username,level) {
-    writeInFile("Started for "+username)
+    // writeInFile("Started for "+username)
     var cursor  = -1
     // twitterAuth.switchKeys()
     const get = promisify(oauth.get.bind(oauth))
@@ -38,7 +38,7 @@ function writeInFile( data){
     .then(body=>JSON.parse(body))
     .then(async response=>{
 
-        writeInFile("Got data from Api sucessfully " +" at "+ new Date)
+        // writeInFile("Got data from Api sucessfully " +" at "+ new Date)
         cursor = response.next_cursor
         count++;
         json = response.users
@@ -56,7 +56,7 @@ function writeInFile( data){
             query += "\n MERGE(n)-[:Follows]->(m"+i+") \n"
         }
         query += "RETURN 1"
-        writeInFile("Sending data to the db")
+        // writeInFile("Sending data to the db")
         session = driver.session()
         flag = 0
         while(flag == 0){
@@ -70,7 +70,7 @@ function writeInFile( data){
                 
                 if (level == 1){
                     for(i =0;i<response.users.length;i++){
-                        writeInFile("New call for level2")
+                        // writeInFile("New call for level2")
                         await getFollowers (response.users[i].screen_name,2)
                         .catch(e=>{
                             writeInFile(JSON.stringify(e));
@@ -90,8 +90,8 @@ function writeInFile( data){
         if(diff>0){
             await sleep(diff)
         }
-        // time3 =  new Date
-        // console.log("time:", JSON.stringify(tempTime - time3), "   becuse :" ,JSON.stringify(diff))
+        time3 =  new Date
+        writeInFile("time: "+ JSON.stringify(tempTime - time3)+"   becuse : " +JSON.stringify(diff))
         
     })
     .catch(e=>{
