@@ -1,25 +1,22 @@
-const OAuth = require('oauth')
 const fs = require('fs')
 const neo4j = require('neo4j-driver')
 var express = require('express')
 var bodyParser = require('body-parser')
 var cors = require('cors');
-const e = require('express');
+// const e = require('express');
 var app = express()
 app.use(cors())
 var jsonParser = bodyParser.json()
- 
 
-
-global.PTR = 0
+const config = require('./config2.json')
+const OAuth = require('oauth')
 var oauth
 
 
+global.PTR = 0
 
-/****************** Api  Connection ******************/
-url = "https://api.twitter.com/1.1/friends/list.json?"
-lookup = "https://api.twitter.com/1.1/users/lookup.json?"
-const config = require('./config.json')
+
+
 
 
 /****************** neo4j  Connection ******************/
@@ -36,7 +33,7 @@ oauth  = twitterAuth.getOauth(global.PTR) // first time
 
 
 /****Timer for calculations ********/
- setInterval(neo4jFunctions.calculate, 21600000); 
+//  setInterval(neo4jFunctions.calculate, 21600000); 
 
 
 
@@ -45,14 +42,14 @@ app.post('/load2neo4j/calculate',async function(req, res){
   
   await neo4jFunctions.calculate()
   .then(()=>{
-    results = {
+    var results = {
       status: 201,
       description:"Done calculations"
     }
     res.send(results)
   })
   .catch(e=>{
-    results = {
+    var results = {
       status: 500,
       description:e
     }
@@ -63,9 +60,9 @@ app.post('/load2neo4j/calculate',async function(req, res){
 /********* Api to discover new level 0 profiles from neo4j data**************/
 app.get('/discover/level0',jsonParser, async  function (req, res) {
   try{
-    skip =  req.query.page*req.query.limit;
+    var skip  =  req.query.page*req.query.limit;
     const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw))
-    query =`
+    var query =`
     MATCH(n:Level1)<-[d:Data]-(q:Date)
     WHERE not n:IgnoreDiscover and  duration.inSeconds(q.dateTime, dateTime()).hours <=6 
     WITH n,d ORDER BY d.TS_Value DESC LIMIT 100
@@ -74,17 +71,17 @@ app.get('/discover/level0',jsonParser, async  function (req, res) {
     SKIP `+skip+`
     LIMIT `+req.query.limit+`
     `
-    session = driver.session()
+    var session = driver.session()
     await session.run(query)
     .then(response=>{
       if(response.records.length == 0){
-        result = {
+        var result = {
           status:204,
           description: "No such profiles found"
         }
       }
       else{
-        result = []
+        var result = []
         for(i=0;i<response.records.length;i++)
           result.push(response.records[i]._fields[0])
          res.send({status:200, data:result})
@@ -92,7 +89,7 @@ app.get('/discover/level0',jsonParser, async  function (req, res) {
      
     })
     .catch(e=>{
-      results = {
+      var results = {
         status: 500,
         description:e
       }
@@ -105,7 +102,7 @@ app.get('/discover/level0',jsonParser, async  function (req, res) {
 }
 catch(e){
   console.log(e)
-  results = {
+  var results = {
     status: 500,
     description:e
   }
@@ -116,15 +113,14 @@ catch(e){
 
 /********* Api to export 2 level followers to neo4j**************/
 app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
-
-  screenName = req.body.screenName
+  var screenName = req.body.screenName
   res.send("process started for "+screenName);
   await twitterfunctions.checkExistance(screenName)
   .then(async ()=>{
     fs.appendFile('./log.txt',"\n Process Started for "+screenName+ " at " + new Date() , err => {
       if (err) {
           console.log('Error writing file: ', err)
-          results = {
+          var results = {
             status: 500,
             description:err
           }
@@ -135,7 +131,7 @@ app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
     
     await twitterfunctions.get2LevelFollowers(screenName)
     .then(()=>{
-      results = {
+      var results = {
         status: 200,
         description:"Done successfully"
       }
@@ -145,14 +141,14 @@ app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
       fs.appendFile('./log.txt',"\n "+ JSON.stringify(e) , err => {
         if (err) {
             console.log('Error writing file: ', err)
-            results = {
+            var results = {
               status: 500,
               description:err
             }
             // res.send(results)
           }
       })
-      results = {
+      var results = {
         status: 500,
         description:e
       }
@@ -163,7 +159,7 @@ app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
     fs.appendFile('./log.txt',"\n "+ e , err => {
       if (err) {
           console.log('Error writing file: ', err)
-          results = {
+          var results = {
             status: 500,
             description:e
           }
@@ -178,12 +174,12 @@ app.post('/load2neo4j/all',jsonParser, async  function (req, res) {
 
 /********* Api to get All details of a specific profile at a specific time**************/
 app.get('/getData/profile/Time', async  function (req, res) {
-  // screenName = req.query.screenName
-  hours = req.query.time
-  skip =  req.query.page*req.query.limit;
+  // var screenName = req.query.screenName
+  var hours = req.query.time
+  var skip  =  req.query.page*req.query.limit;
   
   // {screenName:'`+screenName+`'}
-  query = ` MATCH(n:Profile)<-[d:Data]-(q:Date)
+  var query = ` MATCH(n:Profile)<-[d:Data]-(q:Date)
             WHERE  duration.inSeconds(q.dateTime, dateTime()).hours <=`+String(hours)+`
             and duration.inSeconds(q.dateTime, dateTime()).hours >=`+String(hours-6)+`
             RETURN n, d
@@ -192,21 +188,21 @@ app.get('/getData/profile/Time', async  function (req, res) {
             LIMIT `+req.query.limit+`
              `
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
-  session = driver.session()
+  var session = driver.session()
   await session.run(query)
   .then(response=>{
     if(response.records.length == 0){
-      results = {
+      var results = {
         status: 204,
         description:"No such user found"
       }
       res.send(results)
     }
     else{
-      var results = []
+      var  results = []
       for(i =0;i<response.records.length;i++)
       {
-        Properties = response.records[i]._fields[0].properties
+        var Properties = response.records[i]._fields[0].properties
         Properties["createdAt"] = Properties.createdAt.day +"-"+Properties.createdAt.month+ "-" +Properties.createdAt.year
         Properties["storedOn"] = Properties.storedOn.day +"-"+Properties.storedOn.month+ "-" +Properties.storedOn.year
         if(Properties.hasOwnProperty('tags')){
@@ -216,10 +212,10 @@ app.get('/getData/profile/Time', async  function (req, res) {
           Properties["tags"] = "None"
         }
         
-        calculated= response.records[i]._fields[1].properties
-        labels= response.records[i]._fields[0].labels
+        var calculated= response.records[i]._fields[1].properties
+        var labels= response.records[i]._fields[0].labels
         Properties["labels"] = labels.toString()
-        result = Object.assign(Properties, calculated)
+        // var result = Object.assign(Properties, calculated)
         results.push(results)
         
       }
@@ -228,7 +224,7 @@ app.get('/getData/profile/Time', async  function (req, res) {
     
   })
   .catch(e=>{
-    results = {
+    var results = {
       status: 500,
       description:e
     }
@@ -242,11 +238,11 @@ app.get('/getData/profile/Time', async  function (req, res) {
 
 /********* Api to get All details of a specific profile at a specific time**************/
 app.get('/getData/profile/specificScore', async  function (req, res) {
-  score = req.query.score
-  hours = req.query.time
-  skip =  req.query.page*req.query.limit;
+  var score = req.query.score
+  var hours = req.query.time
+  var skip  =  req.query.page*req.query.limit;
   
-  query = ` MATCH(n:Profile)<-[d6:Data]-(q:Date)
+  var query = ` MATCH(n:Profile)<-[d6:Data]-(q:Date)
             where duration.inSeconds(q.dateTime, dateTime()).hours<6 and duration.inSeconds(q.dateTime, dateTime()).hours>=0
             OPTIONAL MATCH(n)<-[d12:Data]-(q2:Date)
             WHERE  duration.inSeconds(q.dateTime, dateTime()).hours <=`+String(hours)+`
@@ -256,21 +252,21 @@ app.get('/getData/profile/specificScore', async  function (req, res) {
             SKIP `+skip+`
             LIMIT `+req.query.limit+``
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
-  session = driver.session()
+  var session = driver.session()
   await session.run(query)
   .then(response=>{
     if(response.records.length == 0){
-      results = {
+      var results = {
         status: 204,
         description:"No such user found"
       }
       res.send(results)
     }
     else{
-      var results = []
-      for(i =0;i<response.records.length;i++)
+      var  results = []
+      for(var i =0;i<response.records.length;i++)
       {
-        Properties = response.records[i]._fields[0].properties
+        var Properties = response.records[i]._fields[0].properties
         Properties["createdAt"] = Properties.createdAt.day +"-"+Properties.createdAt.month+ "-" +Properties.createdAt.year
         Properties["storedOn"] = Properties.storedOn.day +"-"+Properties.storedOn.month+ "-" +Properties.storedOn.year
         if(Properties.hasOwnProperty('tags')){
@@ -280,11 +276,11 @@ app.get('/getData/profile/specificScore', async  function (req, res) {
           Properties["tags"] = "None"
         }
         
-        current= response.records[i]._fields[1]
+        var current= response.records[i]._fields[1]
         Properties["current"] = current
-        change= response.records[i]._fields[2]
+        var change= response.records[i]._fields[2]
         Properties["change"] = change
-        labels= response.records[i]._fields[0].labels
+        var labels= response.records[i]._fields[0].labels
         Properties["labels"] = labels.toString()
         results.push(Properties)
         
@@ -294,7 +290,7 @@ app.get('/getData/profile/specificScore', async  function (req, res) {
     
   })
   .catch(e=>{
-    results = {
+    var results = {
       status: 500,
       description:e
     }
@@ -310,27 +306,27 @@ app.get('/getData/profile/specificScore', async  function (req, res) {
 
 /********* Api to get All details of a specific profile**************/
 app.get('/getData/profile', async  function (req, res) {
-  skip =  req.query.page*req.query.limit;
-  screenName = req.query.screenName
-  query = ` MATCH(n:Profile{screenName:'`+screenName+`'})<-[d:Data]-(q:Date)
+  var skip  =  req.query.page*req.query.limit;
+  var screenName = req.query.screenName
+  var query = ` MATCH(n:Profile{screenName:'`+screenName+`'})<-[d:Data]-(q:Date)
             WHERE  duration.inSeconds(q.dateTime, dateTime()).hours <=6
             RETURN n, d
             ORDER BY `+req.query.score+` `+req.query.order+`            
             SKIP `+skip+`
             LIMIT `+req.query.limit+``
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
-  session = driver.session()
+  var session = driver.session()
   await session.run(query)
   .then(response=>{
     if(response.records.length == 0){
-      results = {
+      var results = {
         status: 204,
         description:"no such user found"
       }
       res.send(results)
     }
     else{
-        Properties= response.records[0]._fields[0].properties
+        var Properties= response.records[0]._fields[0].properties
         Properties["createdAt"] = Properties.createdAt.day +"-"+Properties.createdAt.month+ "-" +Properties.createdAt.year
         Properties["storedOn"] = Properties.storedOn.day +"-"+Properties.storedOn.month+ "-" +Properties.storedOn.year
         if(Properties.hasOwnProperty('tags')){
@@ -340,9 +336,9 @@ app.get('/getData/profile', async  function (req, res) {
           Properties["tags"] = "None"
         }
         
-        calculated= response.records[0]._fields[1].properties
-        result = Object.assign(Properties, calculated)
-        final = []
+        var calculated= response.records[0]._fields[1].properties
+        var result = Object.assign(Properties, calculated)
+        var final = []
         for (key in results) {
           final.push({"label":key,"value":result[key]})
         }  
@@ -351,7 +347,7 @@ app.get('/getData/profile', async  function (req, res) {
     
   })
   .catch(e=>{
-    results = {
+    var results = {
     status: 500,
     description:e
   }
@@ -365,6 +361,7 @@ app.get('/getData/profile', async  function (req, res) {
 
 /********* Api to add new api key to the config file**************/
 app.post('/create/apikey',jsonParser, function(req, res){
+  const config = require('./config2.json')
   var json = {
     TWITTER_CONSUMER_KEY : req.body.consumerKey,
     TWITTER_CONSUMER_SECRET : req.body.consumerSecret,
@@ -374,14 +371,14 @@ app.post('/create/apikey',jsonParser, function(req, res){
   config.push(json)
   fs.writeFile('./config.json', JSON.stringify(config), err => {
     if (err) {
-      results = {
+      var results = {
         status: 500,
         description:err
       }
       res.send(results)
        
     } else {
-      results = {
+      var results = {
         status: 200,
         description:"Successfully added new key to file"
       }
@@ -395,13 +392,13 @@ app.post('/create/apikey',jsonParser, function(req, res){
 /********* Api to add new property to the existing node in neo4j**************/
 app.post('/updateProfile/add/property',jsonParser,async function(req, res){
   console.log("called")
-  query = `
+  var query = `
       MATCH(n:Profile{screenName:'`+req.body.screenName+`'})
       set n.`+req.body.newProp+` = True
       RETURN n
   `
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
-  session = driver.session()
+  var session = driver.session()
   await session.run(query)
   .then(response=>{
     if(response.records.length == 0)
@@ -422,24 +419,24 @@ app.post('/updateProfile/add/property',jsonParser,async function(req, res){
 /********* Api to add new label of IgnoreProcess  to the existing node in neo4j**************/
 app.post('/updateProfile/add/label',jsonParser,async function(req, res){
   console.log("called")
-  query = `
+  var query = `
       MATCH(n:Profile{screenName:'`+req.body.screenName+`'})
       set n:`+req.body.label+`
       RETURN n
   `
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
-  session = driver.session()
+  var session = driver.session()
   await session.run(query)
   .then(response=>{
     if(response.records.length == 0){
-      results = {
+      var results = {
         status: 204,
         description:"No such user found"
       }
       res.send(results)
     }
       else{
-        results = {
+        var results = {
           status: 200,
           description:"Profile Updated"
         }
@@ -447,7 +444,7 @@ app.post('/updateProfile/add/label',jsonParser,async function(req, res){
     }
   })
   .catch(e=>{
-    results = {
+    var results = {
       status: 500,
       description:e
     }
@@ -461,7 +458,7 @@ app.post('/updateProfile/add/label',jsonParser,async function(req, res){
 
 /********* Api to add new tag to the existing node in neo4j**************/
 app.post('/updateProfile/add/tag',jsonParser,async function(req, res){
-  query = `
+  var query = `
       MATCH(n:Profile{screenName:'`+req.body.screenName+`'}) 
       set n.tags = ( case exists(n.tags) 
       when true
@@ -472,18 +469,18 @@ app.post('/updateProfile/add/tag',jsonParser,async function(req, res){
       RETURN n
   `
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
-  session = driver.session()
+  var session = driver.session()
   await session.run(query)
   .then(response=>{
     if(response.summary.updateStatistics._stats.propertiesSet == 0){
-      results = {
+      var results = {
         status: 204,
         description:"No such user found"
       }
       res.send(results)
     }
     else{
-      results = {
+      var results = {
         status: 200,
         description:"Profile Updated"
       }
@@ -492,7 +489,7 @@ app.post('/updateProfile/add/tag',jsonParser,async function(req, res){
     
   })
   .catch(e=>{
-    results = {
+    var results = {
       status: 500,
       description:e
     }
@@ -507,24 +504,24 @@ app.post('/updateProfile/add/tag',jsonParser,async function(req, res){
 
 /********* Api to delete tag to the existing node in neo4j**************/
 app.post('/updateProfile/delete/tag',jsonParser,async function(req, res){
-  query = `
+  var query = `
       MATCH(n:Profile{screenName:'`+req.body.screenName+`'}) 
       SET n.tags = [x IN n.tags WHERE x <> "`+req.body.tag+`"]
       RETURN n
   `
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
-  session = driver.session()
+  var session = driver.session()
   await session.run(query)
   .then(response=>{
     if(response.summary.updateStatistics._stats.propertiesSet == 0){
-      results = {
+      var results = {
         status: 204,
         description:"No such user found"
       }
       res.send(results)
     }
     else{
-      results = {
+      var results = {
         status: 200,
         description:"Profile Updated"
       }
@@ -533,7 +530,7 @@ app.post('/updateProfile/delete/tag',jsonParser,async function(req, res){
     
   })
   .catch(e=>{
-    results = {
+    var results = {
     status: 500,
     description:e
   }
@@ -548,19 +545,19 @@ app.post('/updateProfile/delete/tag',jsonParser,async function(req, res){
 
 /***** Find the  labels count*/
 app.get('/allProfileCount',async function(req,res){
-  query = `
+  var query = `
       MATCH (a) 
       WHere not a:Date WITH DISTINCT LABELS(a) AS temp, COUNT(a) AS tempCnt
       UNWIND temp AS label
       RETURN label, SUM(tempCnt) AS count
       `
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
-  session = driver.session()
+  var session = driver.session()
   await session.run(query)
   .then(response=>{
     // res.send(response)
     var txt = "["
-    for(i = 0;i<response.records.length;i++){
+    for(var i = 0;i<response.records.length;i++){
       txt += "{\"label\":\""+response.records[i]._fields[0]+"\",\"count\": \""+response.records[i]._fields[1]+"\"},"
     }
     txt = txt.slice(0, -1) 
@@ -569,7 +566,7 @@ app.get('/allProfileCount',async function(req,res){
 
   })
   .catch(e=>{
-    results = {
+    var results = {
       status: 500,
       description:e
     }
@@ -582,9 +579,9 @@ app.get('/allProfileCount',async function(req,res){
 
 /**** Get profile according to the tag given***/
 app.get('/getData/profile/Tag',async function(req,res){
-  skip =  req.query.page*req.query.limit;
+  var skip  =  req.query.page*req.query.limit;
   
-  query = `
+  var query = `
       MATCH(n:Profile)
       WHERE "`+req.query.tag+`" IN n.tags
       RETURN n
@@ -593,20 +590,20 @@ app.get('/getData/profile/Tag',async function(req,res){
       LIMIT `+req.query.limit+`
       `
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
-  session = driver.session()
+  var session = driver.session()
   await session.run(query)
   .then(response=>{
     if(response.records.length== 0){
-      results = {
+      var results = {
         status: 204,
         description:"No such user found"
       }
       res.send(results)
     }
     else{
-      var results = []
-      for(i = 0;i<response.records.length;i++){
-        Properties = response.records[i]._fields[0].properties
+      var  results = []
+      for(var i = 0;i<response.records.length;i++){
+        var Properties = response.records[i]._fields[0].properties
         Properties["createdAt"] = Properties.createdAt.day +"-"+Properties.createdAt.month+ "-" +Properties.createdAt.year
           Properties["storedOn"] = Properties.storedOn.day +"-"+Properties.storedOn.month+ "-" +Properties.storedOn.year
           if(Properties.hasOwnProperty('tags')){
@@ -624,7 +621,7 @@ app.get('/getData/profile/Tag',async function(req,res){
 
   })
   .catch(e=>{
-    results = {
+    var results = {
     status: 500,
     description:e
   }
@@ -638,9 +635,9 @@ app.get('/getData/profile/Tag',async function(req,res){
 
 /****** api to get All profiles for a specific label******/
 app.get('/getData/profile/label',async function(req,res){
-  skip =  req.query.page*req.query.limit;
+  var skip  =  req.query.page*req.query.limit;
   
-  queryrun = `
+  var queryrun = `
       MATCH(n:Profile:`+req.query.label+`)
       RETURN n
       ORDER BY `+req.query.score+` `+req.query.order+` 
@@ -649,11 +646,11 @@ app.get('/getData/profile/label',async function(req,res){
       `
       
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
-  session = driver.session()
+  var session = driver.session()
   await session.run(queryrun)
   .then(response=>{
     if(response.records.length== 0){
-      results = {
+      var results = {
         status: 204,
         description:"No such user found"
       }
@@ -661,10 +658,10 @@ app.get('/getData/profile/label',async function(req,res){
       
     }
     else{
-    var results = []
-    for(i = 0;i<response.records.length;i++){
+    var  results = []
+    for(var i = 0;i<response.records.length;i++){
       
-      Properties = response.records[i]._fields[0].properties
+      var Properties = response.records[i]._fields[0].properties
       
       Properties["createdAt"] = Properties.createdAt.day +"-"+Properties.createdAt.month+ "-" +Properties.createdAt.year
       Properties["storedOn"] = Properties.storedOn.day +"-"+Properties.storedOn.month+ "-" +Properties.storedOn.year
@@ -683,7 +680,7 @@ app.get('/getData/profile/label',async function(req,res){
   })
   .catch(e=>{
     console.log(e)
-    results = {
+    var results = {
       status: 500,
       description:e
     }
@@ -696,8 +693,8 @@ app.get('/getData/profile/label',async function(req,res){
 
 /****** api to get All profiles for a specific property******/
 app.get('/getData/profile/prop',async function(req,res){
-  skip =  req.query.page*req.query.limit;
-  query = `
+  var skip  =  req.query.page*req.query.limit;
+  var query = `
       MATCH(n:Profile{`+req.query.prop+`:true})
       RETURN n
       ORDER BY `+req.query.score+` `+req.query.order+` 
@@ -706,16 +703,16 @@ app.get('/getData/profile/prop',async function(req,res){
      
       `
   const driver = neo4j.driver(uri, neo4j.auth.basic(user, psw), { disableLosslessIntegers: true })
-  session = driver.session()
+  var session = driver.session()
   await session.run(query)
   .then(response=>{
     if(response.records.length== 0)
     res.send("No such user found")
     else{
-    var results = []
-    for(i = 0;i<response.records.length;i++){
+    var  results = []
+    for(var i = 0;i<response.records.length;i++){
       
-      Properties = response.records[i]._fields[0].properties
+      var Properties = response.records[i]._fields[0].properties
       
       Properties["createdAt"] = Properties.createdAt.day +"-"+Properties.createdAt.month+ "-" +Properties.createdAt.year
       Properties["storedOn"] = Properties.storedOn.day +"-"+Properties.storedOn.month+ "-" +Properties.storedOn.year
@@ -750,7 +747,7 @@ app.get('/Download/log',function(req, res){
 
 /****** default Api ******/
 app.get('/',function(req, res){
-  msg = `
+  var msg = `
   Welcome to the twitter apis\n 
   Visit: 
   https://docs.google.com/document/d/1wh60XtV7MnTmyewUvAoUN0av-2ie5dX5QsgulNdhzac/edit?usp=sharing 
