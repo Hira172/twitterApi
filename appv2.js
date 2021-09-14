@@ -11,9 +11,7 @@ var jsonParser = bodyParser.json()
  
 
 
-global.count = 0
 global.PTR = 0
-// global.level1 = []
 var oauth
 
 
